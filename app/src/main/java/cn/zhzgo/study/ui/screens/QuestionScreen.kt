@@ -2,13 +2,19 @@ package cn.zhzgo.study.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,18 +22,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.foundation.border
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.shape.CircleShape
 import cn.zhzgo.study.ui.components.*
-
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
-import androidx.compose.ui.text.withStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,20 +41,12 @@ fun QuestionScreen(
         viewModel.loadQuestions(subjectId, isFavorites)
     }
 
-    val questions by viewModel.questions.collectAsState()
-    val currentIndex by viewModel.currentIndex.collectAsState()
-    val userAnswers by viewModel.userAnswers.collectAsState()
-    val submittedQuestions by viewModel.submittedQuestions.collectAsState()
-    val aiExplanation by viewModel.aiExplanation.collectAsState()
-    val isLoadingAi by viewModel.isLoadingAi.collectAsState()
-    val aiRemaining by viewModel.aiRemaining.collectAsState()
-    val favoriteQuestionIds by viewModel.favoriteQuestionIds.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
     
-    val currentQuestion = questions.getOrNull(currentIndex)
-    // Fix reactivity: observe submittedQuestions directly
-    val isSubmitted = currentQuestion?.let { submittedQuestions.contains(it.id) } ?: false
+    val currentQuestion = uiState.questions.getOrNull(uiState.currentIndex)
+    val isSubmitted = currentQuestion?.let { uiState.submittedQuestions.contains(it.id) } ?: false
     val hasAnswer = currentQuestion?.let { 
-        val answer = userAnswers[it.id]
+        val answer = uiState.userAnswers[it.id]
         when (answer) {
             is String -> answer.isNotEmpty()
             is Collection<*> -> answer.isNotEmpty()
@@ -82,7 +73,7 @@ fun QuestionScreen(
                 },
                 actions = {
                      if (currentQuestion != null) {
-                         val isFavorite = favoriteQuestionIds.contains(currentQuestion.id)
+                         val isFavorite = uiState.favoriteQuestionIds.contains(currentQuestion.id)
                          IconButton(onClick = { viewModel.toggleFavorite(currentQuestion.id) }) {
                              Icon(
                                  imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
@@ -97,11 +88,11 @@ fun QuestionScreen(
                         }
                      }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors()
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
         bottomBar = {
-            if (questions.isNotEmpty()) {
+            if (uiState.questions.isNotEmpty()) {
                 BottomAppBar(
                     containerColor = MaterialTheme.colorScheme.surface,
                     tonalElevation = 0.dp,
@@ -124,7 +115,7 @@ fun QuestionScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             TextButton(
                                 onClick = viewModel::prevQuestion, 
-                                enabled = currentIndex > 0,
+                                enabled = uiState.currentIndex > 0,
                                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
                             ) {
                                 Text("上一题")
@@ -149,7 +140,7 @@ fun QuestionScreen(
                             } else {
                                 Button(
                                     onClick = viewModel::nextQuestion,
-                                    enabled = currentIndex < questions.size - 1,
+                                    enabled = uiState.currentIndex < uiState.questions.size - 1,
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = MaterialTheme.colorScheme.onSurface,
                                         contentColor = MaterialTheme.colorScheme.surface,
@@ -170,8 +161,11 @@ fun QuestionScreen(
     ) { paddingValues ->
         if (currentQuestion == null) {
             Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                if (questions.isEmpty()) CircularProgressIndicator(color = MaterialTheme.colorScheme.onBackground)
-                else Text("暂无题目", color = Color.Gray)
+                if (uiState.questions.isEmpty()) {
+                    cn.zhzgo.study.ui.components.SkeletonList(count = 3)
+                } else {
+                    Text("暂无题目", color = Color.Gray)
+                }
             }
         } else {
             Column(
@@ -183,7 +177,7 @@ fun QuestionScreen(
             ) {
                 // Progress Bar (Minimalist)
                 LinearProgressIndicator(
-                    progress = { (currentIndex + 1) / questions.size.toFloat() },
+                    progress = { (uiState.currentIndex + 1) / uiState.questions.size.toFloat() },
                     modifier = Modifier.fillMaxWidth().height(2.dp),
                     color = MaterialTheme.colorScheme.onBackground,
                     trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
@@ -214,14 +208,14 @@ fun QuestionScreen(
                 // Question Content
                 QuestionContent(question = currentQuestion)
 
-                // Options based on type
-                val options = viewModel.parseOptions(currentQuestion.options)
+                // Options based on type (Parsed fast on background thread in viewmodel)
+                val options = uiState.parsedOptionsMap[currentQuestion.id] ?: emptyMap()
                 
                 when (currentQuestion.type) {
                     "single" -> {
                         SingleChoiceQuestion(
                             options = options,
-                            selectedOption = userAnswers[currentQuestion.id] as? String,
+                            selectedOption = uiState.userAnswers[currentQuestion.id] as? String,
                             onOptionSelected = { viewModel.selectSingleOption(currentQuestion.id, it) },
                             showAnswer = isSubmitted,
                             correctAnswer = viewModel.normalizeAnswer(currentQuestion.type, currentQuestion.answer)
@@ -229,7 +223,7 @@ fun QuestionScreen(
                     }
                     "multiple" -> {
                         @Suppress("UNCHECKED_CAST")
-                        val selectedSet = userAnswers[currentQuestion.id] as? Set<String> ?: emptySet()
+                        val selectedSet = uiState.userAnswers[currentQuestion.id] as? Set<String> ?: emptySet()
                         MultiChoiceQuestion(
                             options = options,
                             selectedOptions = selectedSet,
@@ -240,7 +234,7 @@ fun QuestionScreen(
                     }
                     "judge" -> {
                         JudgeQuestion(
-                            selectedOption = userAnswers[currentQuestion.id] as? String,
+                            selectedOption = uiState.userAnswers[currentQuestion.id] as? String,
                             onOptionSelected = { viewModel.selectJudgeOption(currentQuestion.id, it) },
                             showAnswer = isSubmitted,
                             correctAnswer = viewModel.normalizeAnswer(currentQuestion.type, currentQuestion.answer)
@@ -248,7 +242,7 @@ fun QuestionScreen(
                     }
                     "fill" -> {
                         FillBlankQuestion(
-                            answerText = userAnswers[currentQuestion.id] as? String ?: "",
+                            answerText = uiState.userAnswers[currentQuestion.id] as? String ?: "",
                             onAnswerChange = { viewModel.enterFillBlank(currentQuestion.id, it) },
                             showAnswer = isSubmitted,
                             correctAnswer = currentQuestion.answer
@@ -264,7 +258,7 @@ fun QuestionScreen(
                     Spacer(modifier = Modifier.height(32.dp))
                     
                     // AI Tutor Button
-                    if (aiExplanation == null) {
+                    if (uiState.aiExplanation == null) {
                          Button(
                              onClick = { viewModel.requestAiExplanation(currentQuestion) },
                              modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -274,9 +268,9 @@ fun QuestionScreen(
                              ),
                              border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface),
                              shape = RoundedCornerShape(8.dp),
-                             enabled = !isLoadingAi
+                             enabled = !uiState.isLoadingAi
                          ) {
-                             if (isLoadingAi) {
+                             if (uiState.isLoadingAi) {
                                  CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.onSurface)
                                  Spacer(modifier = Modifier.width(8.dp))
                                  Text("AI 分析中...", fontSize = 14.sp)
@@ -302,7 +296,7 @@ fun QuestionScreen(
                     }
                     
                     // AI Explanation Result
-                    if (aiExplanation != null) {
+                    if (uiState.aiExplanation != null) {
                         Spacer(modifier = Modifier.height(24.dp))
                         Column(
                             modifier = Modifier
@@ -312,12 +306,12 @@ fun QuestionScreen(
                         ) {
                              Text("✨ AI 深度解析", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                              Spacer(modifier = Modifier.height(12.dp))
-                             MarkdownText(text = aiExplanation!!)
+                             MarkdownText(text = uiState.aiExplanation!!)
                              
-                             if (aiRemaining != null) {
+                             if (uiState.aiRemaining != null) {
                                  Spacer(modifier = Modifier.height(16.dp))
                                  Text(
-                                     text = "今日剩余 AI 讲解次数: $aiRemaining 次", 
+                                     text = "今日剩余 AI 讲解次数: ${uiState.aiRemaining} 次", 
                                      fontSize = 12.sp, 
                                      color = Color.Gray,
                                      modifier = Modifier.align(Alignment.End)
@@ -330,8 +324,7 @@ fun QuestionScreen(
                 Spacer(modifier = Modifier.height(30.dp))
                 
                 // Pagination Loading Indicator
-                val isLoadingMore by viewModel.isLoadingMore.collectAsState()
-                if (isLoadingMore) {
+                if (uiState.isLoadingMore) {
                     Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onBackground)
                     }
@@ -347,9 +340,9 @@ fun QuestionScreen(
                 containerColor = MaterialTheme.colorScheme.surface
             ) {
                 AnswerSheetDrawer(
-                    questions = questions,
-                    currentIndex = currentIndex,
-                    answers = userAnswers,
+                    questions = uiState.questions,
+                    currentIndex = uiState.currentIndex,
+                    answers = uiState.userAnswers,
                     onQuestionClick = { 
                         viewModel.jumpToQuestion(it)
                         showAnswerSheet = false

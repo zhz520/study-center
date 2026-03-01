@@ -117,7 +117,9 @@ fun FavoritesScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (!isLoading && allFavorites.isEmpty()) {
+            if (isLoading && allFavorites.isEmpty()) {
+                cn.zhzgo.study.ui.components.SkeletonList(count = 5)
+            } else if (!isLoading && allFavorites.isEmpty()) {
                 // Empty state
                 Box(
                     modifier = Modifier.fillMaxSize(),

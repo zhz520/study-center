@@ -96,8 +96,8 @@ fun ResourcesScreen(
                 onClick = onNavigateToContribution,
                 icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                 text = { Text("投稿") },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                containerColor = MaterialTheme.colorScheme.onSurface,
+                contentColor = MaterialTheme.colorScheme.surface,
                 shape = RoundedCornerShape(16.dp)
             )
         }
@@ -109,7 +109,9 @@ fun ResourcesScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (!isLoading && allArticles.isEmpty()) {
+            if (isLoading && allArticles.isEmpty()) {
+                cn.zhzgo.study.ui.components.SkeletonList(count = 5)
+            } else if (!isLoading && allArticles.isEmpty()) {
                 // Empty state
                 Box(
                     modifier = Modifier.fillMaxSize(),

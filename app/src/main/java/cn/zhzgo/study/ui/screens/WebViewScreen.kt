@@ -36,7 +36,7 @@ fun WebViewScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors()
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -59,13 +59,35 @@ fun WebViewScreen(
                         // Set modern Mobile User-Agent so Bing and other engines render the mobile search box properly
                         settings.userAgentString = "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
                         
+                        // Inject Cookies before loading
+                        if (token.isNotEmpty()) {
+                            val cookieManager = android.webkit.CookieManager.getInstance()
+                            cookieManager.setAcceptCookie(true)
+                            cookieManager.setCookie("https://study.zhzgo.cn", "Admin-Token=$token; Path=/")
+                            cookieManager.setCookie("https://study.zhzgo.cn", "token=$token; Path=/")
+                            cookieManager.setCookie("https://study.zhzgo.cn", "vue_admin_template_token=$token; Path=/")
+                            cookieManager.flush()
+                        }
+                        
                         webViewClient = object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                                 return false // Let WebView handle it
                             }
 
+                            override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                                super.onPageStarted(view, url, favicon)
+                                if (token.isNotEmpty()) {
+                                    val js = "javascript:(function() { window.localStorage.setItem('token', '$token'); window.localStorage.setItem('Admin-Token', '$token'); window.localStorage.setItem('vue_admin_template_token', '$token'); })();"
+                                    view?.evaluateJavascript(js, null)
+                                }
+                            }
+
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 super.onPageFinished(view, url)
+                                if (token.isNotEmpty()) {
+                                    val js = "javascript:(function() { window.localStorage.setItem('token', '$token'); window.localStorage.setItem('Admin-Token', '$token'); window.localStorage.setItem('vue_admin_template_token', '$token'); })();"
+                                    view?.evaluateJavascript(js, null)
+                                }
                                 isLoading = false
                             }
                         }

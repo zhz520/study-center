@@ -99,8 +99,11 @@ dependencies {
     // Markdown Rendering via Markwon (AndroidView)
     implementation("io.noties.markwon:core:4.6.2")
     
-    // FFmpeg Kit Full GPL for Video/Audio Process (includes libmp3lame and libx264)
+    // FFmpeg Kit Full GPL for Video/Audio Process (Supports x264, mp3lame)
     implementation("com.arthenica:ffmpeg-kit-full-gpl:6.0-2")
+    
+    // Immutable collections for Compose stability
+    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.7")
     
     // Room
     implementation(libs.room.runtime)

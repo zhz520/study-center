@@ -2,27 +2,26 @@ package cn.zhzgo.study.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// ChatGPT-like Minimalist Palette
-val PrimaryBlack = Color(0xFF202123)
-val BackgroundWhite = Color(0xFFFFFFFF)
-val SurfaceGray = Color(0xFFF7F7F8)
-val TextPrimary = Color(0xFF202123)
-val TextSecondary = Color(0xFF6E6E80)
-val BorderGray = Color(0xFFD9D9E3)
+// ChatGPT iOS Inspired Black & White Palette
+val PureBlack = Color(0xFF000000)
+val PureWhite = Color(0xFFFFFFFF)
 
-val ErrorRed = Color(0xFFEF5350)
-val SuccessGreen = Color(0xFF10A37F) 
+// Light Theme
+val LightBg = Color(0xFFF9F9F9)
+val LightSurface = Color(0xFFFFFFFF)
+val LightText = Color(0xFF0D0D0D)
+val LightTextSecondary = Color(0xFF8E8E93)
+val LightOutline = Color(0xFFE5E5EA)
 
-// Compatibility definitions for Material Theme
-val Purple80 = PrimaryBlack
-val PurpleGrey80 = TextSecondary
-val Pink80 = SuccessGreen
+// Dark Theme
+val DarkBg = Color(0xFF000000)
+val DarkSurface = Color(0xFF1C1C1E)
+val DarkText = Color(0xFFFFFFFF)
+val DarkTextSecondary = Color(0xFF8E8E93)
+val DarkOutline = Color(0xFF38383A)
 
-val Purple40 = PrimaryBlack
-val PurpleGrey40 = TextSecondary
-val Pink40 = SuccessGreen
-
-// Aliases
-val ChatGPTBlack = PrimaryBlack
-val ChatGPTLightGray = TextSecondary
-val ChatGPTTextSecondary = TextSecondary
+// Accents (No Pink!)
+val AccentBlack = Color(0xFF000000)
+val AccentWhite = Color(0xFFFFFFFF)
+val ErrorColor = Color(0xFFFF3B30)
+val SuccessColor = Color(0xFF34C759)

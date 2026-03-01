@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cn.zhzgo.study.ui.components.AppTextField
 import cn.zhzgo.study.ui.components.PrimaryButton
+import cn.zhzgo.study.ui.components.LoadingOverlay
 
 @Composable
 fun LoginScreen(
@@ -56,6 +57,7 @@ fun LoginScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .padding(paddingValues)
         ) {
             Column(
@@ -168,5 +170,7 @@ fun LoginScreen(
                 }
             }
         }
+        
+        LoadingOverlay(isLoading = isLoading, message = "登录中...")
     }
 }

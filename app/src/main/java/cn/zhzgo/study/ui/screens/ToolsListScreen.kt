@@ -11,8 +11,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.VpnKey
@@ -41,7 +41,6 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.MonitorWeight
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -83,7 +82,7 @@ fun ToolsListScreen(
                 title = { Text("全部小工具", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -95,7 +94,7 @@ fun ToolsListScreen(
                         }
                     ) {
                         Icon(
-                            imageVector = if (isGridView) Icons.Filled.ViewList else Icons.Filled.GridView,
+                            imageVector = if (isGridView) Icons.AutoMirrored.Filled.ViewList else Icons.Filled.GridView,
                             contentDescription = "Toggle View"
                         )
                     }
@@ -221,7 +220,7 @@ fun ToolCard(
             modifier = Modifier
                 .size(64.dp)
                 .clip(RoundedCornerShape(20.dp)) // iOS squircle
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+                .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
             Icon(
                 imageVector = icon,
@@ -241,7 +240,7 @@ fun ToolCard(
                 Icon(
                     imageVector = if (isDashboardTool) Icons.Filled.PushPin else Icons.Outlined.PushPin,
                     contentDescription = "Toggle Dashboard Pin",
-                    tint = if (isDashboardTool) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    tint = if (isDashboardTool) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -270,7 +269,7 @@ fun ToolListCard(
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(
@@ -309,7 +308,7 @@ fun ToolListCard(
                 Icon(
                     imageVector = if (isDashboardTool) Icons.Filled.PushPin else Icons.Outlined.PushPin,
                     contentDescription = "Toggle Dashboard Pin",
-                    tint = if (isDashboardTool) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    tint = if (isDashboardTool) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                 )
             }
         }

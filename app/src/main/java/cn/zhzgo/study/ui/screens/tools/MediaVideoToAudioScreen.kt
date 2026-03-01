@@ -12,7 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -49,7 +49,7 @@ fun MediaVideoToAudioScreen(onBack: () -> Unit) {
             TopAppBar(
                 title = { Text("提取音频", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Back") }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
@@ -104,24 +104,37 @@ fun MediaVideoToAudioScreen(onBack: () -> Unit) {
                             isProcessing = true
                             coroutineScope.launch(Dispatchers.IO) {
                                 val inputPath = FFmpegKitConfig.getSafParameterForRead(context, selectedVideoUri)
-                                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                                val appDir = File(downloadsDir, "ZhzgoStudy")
-                                if (!appDir.exists()) appDir.mkdirs()
-                                
-                                val filename = "AUDIO_${System.currentTimeMillis()}.mp3"
-                                val outputFile = File(appDir, filename)
+                                val tempOutputFile = File(context.cacheDir, "temp_audio_${System.currentTimeMillis()}.mp3")
                                 
                                 // FFmpeg command to extract audio: -vn means no video, -c:a libmp3lame encodes to mp3
-                                val cmd = "-i \"$inputPath\" -vn -c:a libmp3lame -q:a 2 \"${outputFile.absolutePath}\""
+                                val cmd = "-i \"$inputPath\" -vn -c:a libmp3lame -q:a 2 \"${tempOutputFile.absolutePath}\""
                                 
                                 val session = FFmpegKit.execute(cmd)
                                 val returnCode = session.returnCode
                                 
-                                withContext(Dispatchers.Main) {
-                                    isProcessing = false
-                                    if (ReturnCode.isSuccess(returnCode)) {
-                                        Toast.makeText(context, "提取成功：已保存至 Downloads/ZhzgoStudy", Toast.LENGTH_LONG).show()
-                                    } else {
+                                if (ReturnCode.isSuccess(returnCode)) {
+                                    val filename = "AUDIO_${System.currentTimeMillis()}.mp3"
+                                    val saved = MediaUtils.saveFileToPublicStorage(
+                                        context,
+                                        tempOutputFile,
+                                        filename,
+                                        "audio/mpeg",
+                                        Environment.DIRECTORY_MUSIC + "/ZhzgoStudy"
+                                    )
+                                    tempOutputFile.delete()
+                                    
+                                    withContext(Dispatchers.Main) {
+                                        isProcessing = false
+                                        if (saved) {
+                                            Toast.makeText(context, "提取成功：已保存至 音乐/ZhzgoStudy", Toast.LENGTH_LONG).show()
+                                        } else {
+                                            Toast.makeText(context, "提取成功但保存失败", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                } else {
+                                    tempOutputFile.delete()
+                                    withContext(Dispatchers.Main) {
+                                        isProcessing = false
                                         Log.e("FFmpegKit", "Extract Audio Failed: ${session.allLogsAsString}")
                                         Toast.makeText(context, "提取失败，错误码：${returnCode.value}", Toast.LENGTH_SHORT).show()
                                     }

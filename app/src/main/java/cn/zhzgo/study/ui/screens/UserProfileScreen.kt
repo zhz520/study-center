@@ -3,7 +3,6 @@ package cn.zhzgo.study.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -46,13 +45,8 @@ fun UserProfileScreen(
         viewModel.fetchProfile(context, userId)
     }
 
-    val isDark = isSystemInDarkTheme()
-    val surfaceColor = if (isDark) Color(0xFF121212) else Color.White
-    val onSurfaceColor = if (isDark) Color.White else Color.Black
-    val cardColor = if (isDark) Color(0xFF1E1E1E) else Color(0xFFF8F9FA)
-
     Scaffold(
-        containerColor = surfaceColor,
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
                 title = { Text("用户主页", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
@@ -62,9 +56,9 @@ fun UserProfileScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = surfaceColor,
-                    navigationIconContentColor = onSurfaceColor,
-                    titleContentColor = onSurfaceColor
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
@@ -100,19 +94,19 @@ fun UserProfileScreen(
                                 modifier = Modifier
                                     .size(100.dp)
                                     .clip(CircleShape)
-                                    .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), CircleShape)
+                                    .border(2.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = data.user.username,
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Black,
-                                color = onSurfaceColor
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "UID: ${data.user.id}",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = onSurfaceColor.copy(alpha = 0.5f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             if (data.user.role == "admin") {
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -134,13 +128,13 @@ fun UserProfileScreen(
                     // Tabs/Sections
                     item {
                         Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = "发布的文章",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = onSurfaceColor
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                         }
@@ -149,12 +143,12 @@ fun UserProfileScreen(
                     if (data.articles.isEmpty()) {
                         item {
                             Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                Text("暂无发布的文章", color = onSurfaceColor.copy(alpha = 0.4f), fontSize = 14.sp)
+                                Text("暂无发布的文章", color = MaterialTheme.colorScheme.outline, fontSize = 14.sp)
                             }
                         }
                     } else {
                         items(data.articles) { article ->
-                            ArticleProfileItem(article, onArticleClick, cardColor, onSurfaceColor)
+                            ArticleProfileItem(article, onArticleClick)
                         }
                     }
 
@@ -164,7 +158,7 @@ fun UserProfileScreen(
                                 text = "最新动态",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = onSurfaceColor
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                         }
@@ -173,12 +167,12 @@ fun UserProfileScreen(
                     if (data.dynamics.isEmpty()) {
                         item {
                             Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                Text("暂无动态", color = onSurfaceColor.copy(alpha = 0.4f), fontSize = 14.sp)
+                                Text("暂无动态", color = MaterialTheme.colorScheme.outline, fontSize = 14.sp)
                             }
                         }
                     } else {
                         items(data.dynamics) { dynamic ->
-                            DynamicItem(dynamic, cardColor, onSurfaceColor)
+                            DynamicItem(dynamic)
                         }
                     }
                 }
@@ -188,9 +182,9 @@ fun UserProfileScreen(
 }
 
 @Composable
-fun ArticleProfileItem(article: Article, onClick: (Int) -> Unit, bg: Color, onSurface: Color) {
+fun ArticleProfileItem(article: Article, onClick: (Int) -> Unit) {
     Surface(
-        color = bg,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
@@ -205,7 +199,7 @@ fun ArticleProfileItem(article: Article, onClick: (Int) -> Unit, bg: Color, onSu
                 modifier = Modifier
                     .size(60.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color.Gray.copy(alpha = 0.1f))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -213,7 +207,7 @@ fun ArticleProfileItem(article: Article, onClick: (Int) -> Unit, bg: Color, onSu
                     text = article.title,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    color = onSurface,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -221,7 +215,7 @@ fun ArticleProfileItem(article: Article, onClick: (Int) -> Unit, bg: Color, onSu
                 Text(
                     text = "${article.view_count} 浏览 · ${article.getTime()?.take(10) ?: ""}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = onSurface.copy(alpha = 0.5f)
+                    color = MaterialTheme.colorScheme.outline
                 )
             }
         }
@@ -229,30 +223,30 @@ fun ArticleProfileItem(article: Article, onClick: (Int) -> Unit, bg: Color, onSu
 }
 
 @Composable
-fun DynamicItem(comment: Comment, bg: Color, onSurface: Color) {
+fun DynamicItem(comment: Comment) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 8.dp)
-            .background(bg.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
             .padding(16.dp)
     ) {
         Text(
             text = "发表了评论：",
             style = MaterialTheme.typography.labelSmall,
-            color = onSurface.copy(alpha = 0.5f),
+            color = MaterialTheme.colorScheme.outline,
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = comment.content,
             style = MaterialTheme.typography.bodyMedium,
-            color = onSurface,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             lineHeight = 22.sp
         )
         Spacer(modifier = Modifier.height(10.dp))
         Surface(
-            color = onSurface.copy(alpha = 0.05f),
+            color = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(8.dp)
         ) {
             Text(

@@ -15,24 +15,23 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// Modern Card with soft shadow
+// Modern Card with Material 3 ElevatedCard
 @Composable
 fun AppCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Card(
+    ElevatedCard(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp)
-            .shadow(4.dp, RoundedCornerShape(16.dp), clip = false),
+            .padding(vertical = 6.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
+        colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 0.dp // We use shadow modifier for softer look
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = 4.dp
         ),
         onClick = onClick ?: {}
     ) {

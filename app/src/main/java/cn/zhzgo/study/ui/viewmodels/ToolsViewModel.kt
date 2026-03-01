@@ -27,13 +27,13 @@ class ToolsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun incrementUsage(toolId: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             toolDao.incrementUsage(toolId)
         }
     }
     
     fun toggleFavorite(toolId: String, isFavorite: Boolean) {
-        viewModelScope.launch {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             toolDao.setFavorite(toolId, !isFavorite)
         }
     }

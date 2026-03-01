@@ -11,7 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
@@ -52,7 +52,7 @@ fun MediaAudioFormatScreen(onBack: () -> Unit) {
             TopAppBar(
                 title = { Text("音频格式转换", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Back") }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
@@ -147,13 +147,8 @@ fun MediaAudioFormatScreen(onBack: () -> Unit) {
                             isProcessing = true
                             coroutineScope.launch(Dispatchers.IO) {
                                 val inputPath = FFmpegKitConfig.getSafParameterForRead(context, selectedAudioUri)
-                                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                                val appDir = File(downloadsDir, "ZhzgoStudy")
-                                if (!appDir.exists()) appDir.mkdirs()
-                                
                                 val formatExt = formats[selectedFormatIndex].lowercase()
-                                val filename = "AUDIO_CONVERTED_${System.currentTimeMillis()}.$formatExt"
-                                val outputFile = File(appDir, filename)
+                                val tempOutputFile = File(context.cacheDir, "temp_audio_conv_${System.currentTimeMillis()}.$formatExt")
                                 
                                 // Determine audio codec based on choice
                                 val codecParam = when(formatExt) {
@@ -164,16 +159,41 @@ fun MediaAudioFormatScreen(onBack: () -> Unit) {
                                     else -> "-c:a copy"
                                 }
                                 
-                                val cmd = "-i \"$inputPath\" $codecParam \"${outputFile.absolutePath}\""
+                                val cmd = "-i \"$inputPath\" $codecParam \"${tempOutputFile.absolutePath}\""
                                 
                                 val session = FFmpegKit.execute(cmd)
                                 val returnCode = session.returnCode
                                 
-                                withContext(Dispatchers.Main) {
-                                    isProcessing = false
-                                    if (ReturnCode.isSuccess(returnCode)) {
-                                        Toast.makeText(context, "转换成功：已保存至 Downloads/ZhzgoStudy", Toast.LENGTH_LONG).show()
-                                    } else {
+                                if (ReturnCode.isSuccess(returnCode)) {
+                                    val filename = "AUDIO_CONVERTED_${System.currentTimeMillis()}.$formatExt"
+                                    val mimeType = when(formatExt) {
+                                        "mp3" -> "audio/mpeg"
+                                        "wav" -> "audio/x-wav"
+                                        "aac" -> "audio/aac"
+                                        "flac" -> "audio/flac"
+                                        else -> "audio/*"
+                                    }
+                                    val saved = MediaUtils.saveFileToPublicStorage(
+                                        context,
+                                        tempOutputFile,
+                                        filename,
+                                        mimeType,
+                                        Environment.DIRECTORY_MUSIC + "/ZhzgoStudy"
+                                    )
+                                    tempOutputFile.delete()
+                                    
+                                    withContext(Dispatchers.Main) {
+                                        isProcessing = false
+                                        if (saved) {
+                                            Toast.makeText(context, "转换成功：已保存至 音乐/ZhzgoStudy", Toast.LENGTH_LONG).show()
+                                        } else {
+                                            Toast.makeText(context, "转换成功但保存失败", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                } else {
+                                    tempOutputFile.delete()
+                                    withContext(Dispatchers.Main) {
+                                        isProcessing = false
                                         Log.e("FFmpegKit", "Convert Audio Failed: ${session.allLogsAsString}")
                                         Toast.makeText(context, "编码失败，该格式可能受损或不支持此转换模式", Toast.LENGTH_SHORT).show()
                                     }

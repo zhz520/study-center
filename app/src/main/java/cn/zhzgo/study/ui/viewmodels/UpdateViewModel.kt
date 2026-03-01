@@ -16,7 +16,7 @@ class UpdateViewModel : ViewModel() {
     private val _isChecking = MutableStateFlow(false)
     val isChecking: StateFlow<Boolean> = _isChecking
     
-    fun checkForUpdates(context: android.content.Context) {
+    fun checkForUpdates(context: android.content.Context, isAutoCheck: Boolean = false) {
         viewModelScope.launch {
             _isChecking.value = true
             try {
@@ -33,11 +33,11 @@ class UpdateViewModel : ViewModel() {
                 if (response.hasUpdate && response.updateType == "patch" && response.data != null) {
                     // It's a Tinker patch, handle it silently
                     cn.zhzgo.study.utils.TinkerManager.downloadAndApplyPatch(context, response.data)
-                } else {
+                } else if (response.hasUpdate || !isAutoCheck) {
                     // It's an APK update, show dialog
+                    // OR it's a manual check, emit state so UI can show "Already latest" toast
                     _updateState.value = response
                 }
-                
             } catch (e: Exception) {
                 // Handle network error
                 e.printStackTrace()

@@ -171,12 +171,12 @@ fun ContributionScreen(
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = Color.Transparent,
-                contentColor = MaterialTheme.colorScheme.primary,
+                contentColor = onSurfaceColor,
                 divider = {},
                 indicator = { tabPositions ->
                     TabRowDefaults.SecondaryIndicator(
                         modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                        color = MaterialTheme.colorScheme.primary
+                        color = onSurfaceColor
                     )
                 }
             ) {
@@ -226,7 +226,7 @@ fun ContributionScreen(
                     placeholder = { Text("在这里输入详细内容...", fontSize = 14.sp) },
                     shape = RoundedCornerShape(16.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        focusedBorderColor = onSurfaceColor,
                         unfocusedBorderColor = onSurfaceColor.copy(alpha = 0.1f)
                     )
                 )
@@ -300,7 +300,7 @@ fun MarkdownToolbar(
                     CircularProgressIndicator(
                         modifier = Modifier.size(12.dp).align(Alignment.TopEnd),
                         strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.primary
+                        color = if (isSystemInDarkTheme()) Color.White else Color.Black
                     )
                 }
             }
@@ -402,7 +402,7 @@ fun ContributionTextField(
             shape = RoundedCornerShape(16.dp),
             singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                focusedBorderColor = if (isSystemInDarkTheme()) Color.White else Color.Black,
                 unfocusedBorderColor = if (isSystemInDarkTheme()) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.1f)
             )
         )

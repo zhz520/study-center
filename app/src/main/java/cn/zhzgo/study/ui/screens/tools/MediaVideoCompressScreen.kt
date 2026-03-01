@@ -10,7 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Compress
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -48,7 +48,7 @@ fun MediaVideoCompressScreen(onBack: () -> Unit) {
             TopAppBar(
                 title = { Text("视频瘦身/压缩", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Back") }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
@@ -126,25 +126,38 @@ fun MediaVideoCompressScreen(onBack: () -> Unit) {
                             isProcessing = true
                             coroutineScope.launch(Dispatchers.IO) {
                                 val inputPath = FFmpegKitConfig.getSafParameterForRead(context, selectedVideoUri)
-                                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                                val appDir = File(downloadsDir, "ZhzgoStudy")
-                                if (!appDir.exists()) appDir.mkdirs()
-                                
-                                val filename = "VIDEO_COMPRESSED_${System.currentTimeMillis()}.mp4"
-                                val outputFile = File(appDir, filename)
+                                val tempOutputFile = File(context.cacheDir, "temp_compressed_${System.currentTimeMillis()}.mp4")
                                 
                                 // H264 encode with varying CRF for size reduction, fast preset
                                 val crf = compressionLevel.toInt()
-                                val cmd = "-i \"$inputPath\" -vcodec libx264 -crf $crf -preset fast -c:a copy \"${outputFile.absolutePath}\""
+                                val cmd = "-i \"$inputPath\" -vcodec libx264 -crf $crf -preset fast -c:a copy \"${tempOutputFile.absolutePath}\""
                                 
                                 val session = FFmpegKit.execute(cmd)
                                 val returnCode = session.returnCode
                                 
-                                withContext(Dispatchers.Main) {
-                                    isProcessing = false
-                                    if (ReturnCode.isSuccess(returnCode)) {
-                                        Toast.makeText(context, "压缩成功：已保存至 Downloads/ZhzgoStudy", Toast.LENGTH_LONG).show()
-                                    } else {
+                                if (ReturnCode.isSuccess(returnCode)) {
+                                    val filename = "VIDEO_COMPRESSED_${System.currentTimeMillis()}.mp4"
+                                    val saved = MediaUtils.saveFileToPublicStorage(
+                                        context,
+                                        tempOutputFile,
+                                        filename,
+                                        "video/mp4",
+                                        Environment.DIRECTORY_MOVIES + "/ZhzgoStudy"
+                                    )
+                                    tempOutputFile.delete()
+                                    
+                                    withContext(Dispatchers.Main) {
+                                        isProcessing = false
+                                        if (saved) {
+                                            Toast.makeText(context, "压缩成功：已保存至 电影/ZhzgoStudy", Toast.LENGTH_LONG).show()
+                                        } else {
+                                            Toast.makeText(context, "压缩成功但保存失败", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                } else {
+                                    tempOutputFile.delete()
+                                    withContext(Dispatchers.Main) {
+                                        isProcessing = false
                                         Log.e("FFmpegKit", "Compress Video Failed: ${session.allLogsAsString}")
                                         Toast.makeText(context, "压缩失败，请重试", Toast.LENGTH_SHORT).show()
                                     }

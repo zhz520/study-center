@@ -456,7 +456,11 @@ fun ArticleContentWeb(article: Article, fontSize: Int, onOpenLink: (String, Stri
                     padding: 0;
                     font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
                 }
-                img { max-width: 100%; height: auto; border-radius: 16.dp; margin: 16px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+                body * {
+                    color: inherit !important;
+                    background-color: transparent !important;
+                }
+                img { max-width: 100%; height: auto; border-radius: 16.dp; margin: 16px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); background-color: initial !important; }
                 p { margin-bottom: 1.2em; text-align: justify; }
                 a { color: #4f46e5; text-decoration: none; font-weight: 600; }
                 blockquote { border-left: 4px solid #e2e8f0; padding-left: 16px; margin: 20px 0; color: #64748b; font-style: italic; }

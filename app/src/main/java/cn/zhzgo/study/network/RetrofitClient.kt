@@ -97,6 +97,9 @@ object RetrofitClient {
         val userPreferences = UserPreferences(context)
 
         val client = OkHttpClient.Builder()
+            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
             .addInterceptor(logging)
             .addInterceptor(AuthInterceptor(userPreferences))
             .build()

@@ -43,6 +43,7 @@ fun RegisterScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .padding(paddingValues)
         ) {
             Column(
