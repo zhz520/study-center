@@ -23,6 +23,7 @@
 # Retrofit/Gson Models
 -keep class cn.zhzgo.study.data.** { *; }
 -keep interface cn.zhzgo.study.network.** { *; }
+-keep class cn.zhzgo.study.network.ApiService { *; }
 
 # Markwon optional dependencies
 -dontwarn com.caverock.androidsvg.**
@@ -52,7 +53,7 @@
 -dontwarn okio.**
 -keep class retrofit2.** { *; }
 -dontwarn retrofit2.**
--keepclassmembers,allowshrinking,allowobfuscation interface * {
+-keepclassmembers interface * {
     @retrofit2.http.* <methods>;
 }
 
@@ -64,6 +65,7 @@
 -keepclassmembernames class kotlinx.** {
     volatile <fields>;
 }
+-keep class kotlin.coroutines.Continuation { *; }
 
 # 4. AndroidX / Jetpack (Compose, Room, ViewModel)
 -keep class androidx.lifecycle.** { *; }
