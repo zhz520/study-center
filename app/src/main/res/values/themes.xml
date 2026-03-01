@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.MyApplication" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Make status bar fully transparent so Compose can draw behind it -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <!-- Dark background: use light (white) status bar icons -->
+        <item name="android:windowLightStatusBar">true</item>
+        <!-- Splash screen: gradient background with centered icon -->
+        <item name="android:windowBackground">@drawable/splash_screen</item>
+    </style>
+
+</resources>
