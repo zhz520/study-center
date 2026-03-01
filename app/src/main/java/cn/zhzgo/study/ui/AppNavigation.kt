@@ -1,11 +1,21 @@
 package cn.zhzgo.study.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.browser.customtabs.CustomTabsIntent
+import android.net.Uri
 import cn.zhzgo.study.ui.screens.*
 import cn.zhzgo.study.ui.screens.tools.*
 import java.net.URLDecoder
@@ -15,14 +25,95 @@ import java.nio.charset.StandardCharsets
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    val context = LocalContext.current
 
-    val navigateToWebView: (String, String) -> Unit = { url, title ->
-        val encodedUrl = URLEncoder.encode(url, StandardCharsets.UTF_8.toString())
-        val encodedTitle = URLEncoder.encode(title, StandardCharsets.UTF_8.toString())
-        navController.navigate("webview/$encodedUrl/$encodedTitle")
+    val navigateToWebView: (String, String) -> Unit = { url, _ ->
+        val customTabsIntent = CustomTabsIntent.Builder().build()
+        try {
+            customTabsIntent.launchUrl(context, Uri.parse(url))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
-    NavHost(navController = navController, startDestination = "login") {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route?.substringBefore("/")
+
+    val bottomNavRoutes = listOf("home", "study", "resources", "tools", "settings")
+
+    Scaffold(
+        bottomBar = {
+            if (bottomNavRoutes.contains(currentRoute)) {
+                NavigationBar {
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                        label = { Text("首页") },
+                        selected = currentRoute == "home",
+                        onClick = {
+                            navController.navigate("home") {
+                                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.MenuBook, contentDescription = "Study") },
+                        label = { Text("题库") },
+                        selected = currentRoute == "study",
+                        onClick = {
+                            navController.navigate("study") {
+                                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Folder, contentDescription = "Resources") },
+                        label = { Text("资源") },
+                        selected = currentRoute == "resources",
+                        onClick = {
+                            navController.navigate("resources") {
+                                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Build, contentDescription = "Tools") },
+                        label = { Text("工具") },
+                        selected = currentRoute == "tools",
+                        onClick = {
+                            navController.navigate("tools") {
+                                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Person, contentDescription = "Me") },
+                        label = { Text("我的") },
+                        selected = currentRoute == "settings",
+                        onClick = {
+                            navController.navigate("settings") {
+                                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    ) { innerPadding ->
+        NavHost(
+            navController = navController, 
+            startDestination = "login",
+            modifier = Modifier.padding(innerPadding)
+        ) {
         
         // --- Core Auth & Main Screens ---
 
@@ -261,4 +352,5 @@ fun AppNavigation() {
         composable("TimestampConverterScreen") { TimestampConverterScreen(onBack = { navController.navigateUp() }) }
         composable("UnitConverterScreen") { UnitConverterScreen(onBack = { navController.navigateUp() }) }
     }
+}
 }
