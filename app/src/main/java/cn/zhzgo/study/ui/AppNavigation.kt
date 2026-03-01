@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import cn.zhzgo.study.ui.screens.*
+import cn.zhzgo.study.ui.screens.tools.*
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -100,7 +101,7 @@ fun AppNavigation() {
         composable("study") {
             StudyScreen(
                 onSubjectSelected = { subject ->
-                    val encodedName = URLEncoder.encode(subject.subject_name.ifEmpty { "Subject" }, StandardCharsets.UTF_8.toString())
+                    val encodedName = URLEncoder.encode(subject.name.ifEmpty { "Subject" }, StandardCharsets.UTF_8.toString())
                     navController.navigate("question/${subject.id}/$encodedName")
                 }
             )
