@@ -46,6 +46,14 @@ interface ApiService {
     @GET("api/data/detailed-stats")
     suspend fun getDetailedStats(): DetailedStatsResponse
 
+    @GET("api/data/leaderboard")
+    suspend fun getLeaderboard(
+        @Query("type") type: String,
+        @Query("subject_id") subjectId: String? = "all",
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 50
+    ): List<LeaderboardUser>
+
     @POST("api/data/progress")
     suspend fun syncProgress(@Body request: ProgressRequest)
 
@@ -136,4 +144,8 @@ interface ApiService {
     // Article Submission API
     @POST("api/data/resources/articles")
     suspend fun submitArticle(@Body article: @JvmSuppressWildcards Map<String, Any?>): GenericMessageResponse
+
+    // Video Parser API
+    @POST("api/public/video/parse")
+    suspend fun parseVideo(@Body request: VideoParseRequest): VideoParseResponse
 }

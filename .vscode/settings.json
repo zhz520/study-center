@@ -1,0 +1,10 @@
+{
+    "java.jdt.ls.java.home": "D:\\tools\\java\\jdk-25.0.2",
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-21",
+            "path": "D:\\tools\\java\\jdk-25.0.2",
+            "default": true
+        }
+    ]
+}

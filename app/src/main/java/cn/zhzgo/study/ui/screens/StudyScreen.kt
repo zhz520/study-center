@@ -24,11 +24,17 @@ import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.ViewList
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cn.zhzgo.study.data.Major
 import cn.zhzgo.study.data.Subject
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush as ComposeBrush
@@ -46,13 +53,16 @@ import androidx.compose.ui.graphics.Brush as ComposeBrush
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudyScreen(
-    onSubjectSelected: (Subject) -> Unit,
+    onSubjectSelected: (Subject, Boolean) -> Unit,
     viewModel: StudyViewModel = viewModel()
 ) {
     val majors by viewModel.majors.collectAsState()
     val subjects by viewModel.subjects.collectAsState()
     val selectedMajor by viewModel.selectedMajor.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val viewMode by viewModel.viewMode.collectAsState()
+    
+    var isMistakesTab by remember { mutableStateOf(false) }
 
     BackHandler(enabled = selectedMajor != null) {
         viewModel.clearSelectedMajor()
@@ -80,6 +90,21 @@ fun StudyScreen(
                         }
                     }
                 },
+                actions = {
+                    if (selectedMajor != null) {
+                        IconButton(onClick = viewModel::toggleViewMode) {
+                            Icon(
+                                imageVector = when (viewMode) {
+                                    0 -> Icons.Default.ViewList
+                                    1 -> Icons.Default.GridView
+                                    else -> Icons.Default.ViewAgenda
+                                },
+                                contentDescription = "切换视图",
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
@@ -91,7 +116,56 @@ fun StudyScreen(
             } else if (selectedMajor == null) {
                 MajorList(majors = majors, onMajorClick = viewModel::selectMajor)
             } else {
-                SubjectList(subjects = subjects, onSubjectClick = onSubjectSelected)
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Segmented control for All vs Mistakes
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 8.dp)
+                            .background(
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f),
+                                RoundedCornerShape(10.dp)
+                            )
+                            .padding(3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(0.dp)
+                    ) {
+                        val tabs = listOf("综合练习", "错题重做")
+                        tabs.forEachIndexed { index, title ->
+                            val isSelected = (index == 1) == isMistakesTab
+                            val bgColor by animateColorAsState(
+                                targetValue = if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent,
+                                animationSpec = tween(200),
+                                label = "tabBg"
+                            )
+                            Surface(
+                                onClick = { isMistakesTab = index == 1 },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(36.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                color = bgColor,
+                                shadowElevation = if (isSelected) 1.dp else 0.dp
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = title,
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                        fontSize = 14.sp,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onSurface
+                                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    
+                    SubjectList(
+                        subjects = subjects, 
+                        isGridView = viewMode == 1, 
+                        viewMode = viewMode,
+                        onSubjectClick = { onSubjectSelected(it, isMistakesTab) }
+                    )
+                }
             }
         }
     }
@@ -168,55 +242,181 @@ fun MajorList(majors: List<Major>, onMajorClick: (Major) -> Unit) {
 }
 
 @Composable
-fun SubjectList(subjects: List<Subject>, onSubjectClick: (Subject) -> Unit) {
+fun SubjectList(subjects: List<Subject>, isGridView: Boolean, viewMode: Int = 0, onSubjectClick: (Subject) -> Unit) {
     if (subjects.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("暂无科目", color = Color.Gray)
         }
     } else {
-        LazyColumn(
-            contentPadding = PaddingValues(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(subjects) { subject ->
-                // Minimalist Subject Item
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
-                        .clickable { onSubjectClick(subject) }
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
+        when (viewMode) {
+            1 -> {
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 150.dp),
+                contentPadding = PaddingValues(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(subjects) { subject ->
+                    Card(
                         modifier = Modifier
-                            .size(40.dp)
-                            .border(1.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(8.dp)),
-                        contentAlignment = Alignment.Center
+                            .height(130.dp)
+                            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                            .clickable { onSubjectClick(subject) },
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Book,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Column(
+                            modifier = Modifier.fillMaxSize().padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(Icons.Default.Book, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(32.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = subject.name,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 2,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                            if (subject.question_count != null) {
+                                Text(
+                                    text = "${subject.question_count} 题",
+                                    fontSize = 11.sp,
+                                    color = Color.Gray,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                        }
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = subject.name,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(16.dp)
-                    )
                 }
             }
+            }
+            2 -> {
+                LazyColumn(
+                    contentPadding = PaddingValues(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(subjects) { subject ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(100.dp)
+                                .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+                                .clickable { onSubjectClick(subject) },
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(60.dp)
+                                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), RoundedCornerShape(12.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Book,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = subject.name,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = if (subject.question_count != null) "共 ${subject.question_count} 道题" else "开始练习",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            else -> {
+            LazyColumn(
+                contentPadding = PaddingValues(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(subjects) { subject ->
+                    // Minimalist Subject Item
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                            .clickable { onSubjectClick(subject) }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .border(1.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(8.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Book,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = subject.name,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                            if (subject.question_count != null) {
+                                Text(
+                                    text = "${subject.question_count} 道题目",
+                                    fontSize = 11.sp,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+        }
         }
     }
 }

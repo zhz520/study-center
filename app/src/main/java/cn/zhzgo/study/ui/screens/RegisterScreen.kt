@@ -2,6 +2,7 @@ package cn.zhzgo.study.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -17,6 +18,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cn.zhzgo.study.ui.components.AppTextField
 import cn.zhzgo.study.ui.components.PrimaryButton
+import cn.zhzgo.study.ui.components.LoadingOverlay
+import kotlinx.coroutines.launch
 
 @Composable
 fun RegisterScreen(
@@ -30,15 +33,32 @@ fun RegisterScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val isRegistered by viewModel.isRegistered.collectAsState()
+    val usernameError by viewModel.usernameError.collectAsState()
+    val passwordError by viewModel.passwordError.collectAsState()
+    val confirmPasswordError by viewModel.confirmPasswordError.collectAsState()
+    val successMessage by viewModel.successMessage.collectAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(successMessage) {
+        if (successMessage != null) {
+            snackbarHostState.showSnackbar(successMessage!!)
+            viewModel.clearSuccessMessage()
+        }
+    }
 
     LaunchedEffect(isRegistered) {
         if (isRegistered) {
+            // Small delay so the user can see the success message
+            kotlinx.coroutines.delay(800)
             onRegisterSuccess()
         }
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -74,6 +94,14 @@ fun RegisterScreen(
                     label = "用户名",
                     leadingIcon = Icons.Default.Person
                 )
+                if (usernameError != null) {
+                    Text(
+                        text = usernameError!!,
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp,
+                        modifier = Modifier.fillMaxWidth().padding(start = 8.dp, top = 4.dp)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -84,6 +112,21 @@ fun RegisterScreen(
                     visualTransformation = PasswordVisualTransformation(),
                     leadingIcon = Icons.Default.Lock
                 )
+                if (passwordError != null) {
+                    Text(
+                        text = passwordError!!,
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp,
+                        modifier = Modifier.fillMaxWidth().padding(start = 8.dp, top = 4.dp)
+                    )
+                } else if (password.isEmpty()) {
+                    Text(
+                        text = "至少8位，需包含字母和数字",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                        fontSize = 12.sp,
+                        modifier = Modifier.fillMaxWidth().padding(start = 8.dp, top = 4.dp)
+                    )
+                }
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
@@ -94,14 +137,29 @@ fun RegisterScreen(
                     visualTransformation = PasswordVisualTransformation(),
                     leadingIcon = Icons.Default.Lock
                 )
+                if (confirmPasswordError != null) {
+                    Text(
+                        text = confirmPasswordError!!,
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp,
+                        modifier = Modifier.fillMaxWidth().padding(start = 8.dp, top = 4.dp)
+                    )
+                }
 
                 if (error != null) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = error!!, 
-                        color = MaterialTheme.colorScheme.error,
-                        fontSize = 14.sp
-                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = error!!,
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -109,7 +167,7 @@ fun RegisterScreen(
                 PrimaryButton(
                     text = if (isLoading) "注册中..." else "立即注册",
                     onClick = viewModel::register,
-                    enabled = !isLoading
+                    enabled = !isLoading && username.isNotBlank() && password.isNotBlank() && confirmPassword.isNotBlank()
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -122,5 +180,8 @@ fun RegisterScreen(
                 }
             }
         }
+
+        LoadingOverlay(isLoading = isLoading, message = "注册中...")
     }
 }
+

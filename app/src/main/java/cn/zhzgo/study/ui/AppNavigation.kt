@@ -226,6 +226,9 @@ fun AppNavigation() {
                 onNavigateToStats = {
                     navController.navigate("stats")
                 },
+                onNavigateToLeaderboard = {
+                    navController.navigate("leaderboard")
+                },
                 onNavigateToAdmin = {
                     val token = if (authState != "loading") authState else ""
                     val adminUrl = "https://study.zhzgo.cn/admin?token=$token&role=admin"
@@ -247,30 +250,43 @@ fun AppNavigation() {
             )
         }
 
+        composable("leaderboard") {
+            LeaderboardScreen(
+                onBack = { navController.navigateUp() }
+            )
+        }
+
         // --- Content & Study Screens ---
 
         composable("study") {
             StudyScreen(
-                onSubjectSelected = { subject ->
+                onSubjectSelected = { subject, isMistakes ->
                     val encodedName = URLEncoder.encode(subject.name.ifEmpty { "Subject" }, StandardCharsets.UTF_8.toString())
-                    navController.navigate("question/${subject.id}/$encodedName")
+                    navController.navigate("question/${subject.id}/$encodedName?isMistakes=$isMistakes")
                 }
             )
         }
 
         composable(
-            route = "question/{subjectId}/{subjectName}",
+            route = "question/{subjectId}/{subjectName}?isMistakes={isMistakes}",
             arguments = listOf(
                 navArgument("subjectId") { type = NavType.IntType },
-                navArgument("subjectName") { type = NavType.StringType }
+                navArgument("subjectName") { type = NavType.StringType },
+                navArgument("isMistakes") { 
+                    type = NavType.BoolType
+                    defaultValue = false 
+                }
             )
         ) { backStackEntry ->
             val subjectId = backStackEntry.arguments?.getInt("subjectId") ?: 0
             val subjectName = URLDecoder.decode(backStackEntry.arguments?.getString("subjectName") ?: "", StandardCharsets.UTF_8.toString())
+            val isMistakes = backStackEntry.arguments?.getBoolean("isMistakes") ?: false
+            
             QuestionScreen(
                 subjectId = subjectId,
                 subjectName = subjectName,
                 isFavorites = false,
+                isMistakes = isMistakes,
                 onBack = { navController.navigateUp() }
             )
         }
@@ -424,6 +440,7 @@ fun AppNavigation() {
         composable("tools/text_counter") { TextCounterScreen(onBack = { navController.navigateUp() }) }
         composable("tools/timestamp_converter") { TimestampConverterScreen(onBack = { navController.navigateUp() }) }
         composable("tools/unit_converter") { UnitConverterScreen(onBack = { navController.navigateUp() }) }
+        composable("tools/video_parser") { VideoParserScreen(onBack = { navController.navigateUp() }) }
     }
 }
 }

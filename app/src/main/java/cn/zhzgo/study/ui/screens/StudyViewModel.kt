@@ -26,6 +26,13 @@ class StudyViewModel(application: Application) : AndroidViewModel(application) {
     private val _isLoading = MutableStateFlow(true)
     val isLoading = _isLoading.asStateFlow()
 
+    private val _viewMode = MutableStateFlow(0) // 0: List, 1: Grid, 2: Detailed Card
+    val viewMode = _viewMode.asStateFlow()
+
+    fun toggleViewMode() {
+        _viewMode.value = (_viewMode.value + 1) % 3
+    }
+
     init {
         loadMajors()
     }

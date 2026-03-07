@@ -1,6 +1,7 @@
 package cn.zhzgo.study.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,11 +13,13 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -194,7 +197,7 @@ fun AccountSettingsScreen(
         ) {
             item { Spacer(modifier = Modifier.height(8.dp)) }
 
-            // Avatar Card
+            // Avatar Card - Original Simple Style with Refined Avatar
             item {
                 Row(
                     modifier = Modifier
@@ -205,11 +208,13 @@ fun AccountSettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val currentIcon = if (avatarIcon.startsWith("http")) avatarIcon else "https://api.dicebear.com/9.x/fun-emoji/png?seed=Felix&size=120"
-                    Box(
-                        modifier = Modifier
-                            .size(58.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
-                        contentAlignment = Alignment.Center
+                    
+                    // Avatar with Subtle Border and Integration
+                    Surface(
+                        modifier = Modifier.size(60.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
                     ) {
                         AsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
@@ -219,18 +224,29 @@ fun AccountSettingsScreen(
                                 .error(cn.zhzgo.study.R.drawable.ic_launcher_foreground)
                                 .build(),
                             contentDescription = "Avatar",
-                            modifier = Modifier.size(54.dp)
+                            modifier = Modifier.fillMaxSize().clip(CircleShape)
                         )
                     }
+                    
                     Spacer(modifier = Modifier.width(16.dp))
+                    
                     Column {
-                        Text(userName.ifEmpty { "未登录" }, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            text = userName.ifEmpty { "未登录" }, 
+                            fontSize = 18.sp, 
+                            fontWeight = FontWeight.Bold, 
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                         val roleLabel = when (userRole) {
                             "admin" -> "管理员"
                             "demo" -> "演示账号"
                             else -> "学生"
                         }
-                        Text(roleLabel, fontSize = 13.sp, color = Color.Gray)
+                        Text(
+                            text = roleLabel, 
+                            fontSize = 13.sp, 
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
                     }
                 }
             }

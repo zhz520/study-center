@@ -44,6 +44,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import cn.zhzgo.study.data.Article
 import cn.zhzgo.study.data.Comment
 import cn.zhzgo.study.ui.viewmodels.ArticleDetailViewModel
+import cn.zhzgo.study.ui.components.ImageViewerDialog
 import coil.compose.AsyncImage
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -64,6 +65,7 @@ fun ArticleDetailScreen(
     val error by viewModel.error.collectAsState()
 
     var commentText by remember { mutableStateOf("") }
+    var viewerImageUrl by remember { mutableStateOf<String?>(null) }
     
     // Fetch data on start
     LaunchedEffect(articleId) {
@@ -74,11 +76,11 @@ fun ArticleDetailScreen(
     var fontSizeLevel by remember { mutableStateOf(1) }
     val bodyFontSizePx = when (fontSizeLevel) { 0 -> 14; 1 -> 16; else -> 18 }
 
-    val isDark = isSystemInDarkTheme()
-    val surfaceColor = if (isDark) Color(0xFF121212) else Color.White
-    val inputBgColor = if (isDark) Color(0xFF1E1E1E) else Color.White
-    val inputBorderColor = if (isDark) Color(0xFF333333) else Color(0xFFEEEEEE)
-    val onSurfaceColor = if (isDark) Color.White else Color.Black
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val inputBgColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    val inputBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
 
     Scaffold(
         containerColor = surfaceColor,
@@ -363,10 +365,9 @@ fun ArticleDetailScreen(
                         }
                     }
 
-                    // 3. Article Content (WebView)
                     item {
                         Box(modifier = Modifier.padding(horizontal = 24.dp)) {
-                            ArticleContentWeb(a, bodyFontSizePx, onOpenLink)
+                            ArticleContentWeb(a, bodyFontSizePx, onOpenLink, onImageClick = { viewerImageUrl = it })
                         }
                     }
 
@@ -427,14 +428,22 @@ fun ArticleDetailScreen(
                 }
             }
         }
+
+        if (viewerImageUrl != null) {
+            ImageViewerDialog(
+                imageUrl = viewerImageUrl!!,
+                onDismiss = { viewerImageUrl = null }
+            )
+        }
     }
 }
 
 @Composable
-fun ArticleContentWeb(article: Article, fontSize: Int, onOpenLink: (String, String) -> Unit) {
+fun ArticleContentWeb(article: Article, fontSize: Int, onOpenLink: (String, String) -> Unit, onImageClick: ((String) -> Unit)? = null) {
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val rawContent = article.content ?: ""
-    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val textColor = if (isDark) "#e2e8f0" else "#1e293b"
+    val textColor = if (isDark) "#ffffff" else "#0d0d0d"
+    val bgColor = if (isDark) "#000000" else "#f9f9f9" // Match Theme.kt PureBlack and LightBg
 
     val bodyContent = if (rawContent.contains("<") && rawContent.contains(">")) {
         rawContent
@@ -451,7 +460,7 @@ fun ArticleContentWeb(article: Article, fontSize: Int, onOpenLink: (String, Stri
                     font-size: ${fontSize}px; 
                     line-height: 1.85; 
                     color: $textColor; 
-                    background: transparent; 
+                    background-color: $bgColor; 
                     margin: 0; 
                     padding: 0;
                     font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -460,13 +469,21 @@ fun ArticleContentWeb(article: Article, fontSize: Int, onOpenLink: (String, Stri
                     color: inherit !important;
                     background-color: transparent !important;
                 }
-                img { max-width: 100%; height: auto; border-radius: 16.dp; margin: 16px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); background-color: initial !important; }
+                img { max-width: 100%; height: auto; border-radius: 16.dp; margin: 16px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); background-color: initial !important; cursor: pointer; }
                 p { margin-bottom: 1.2em; text-align: justify; }
                 a { color: #4f46e5; text-decoration: none; font-weight: 600; }
                 blockquote { border-left: 4px solid #e2e8f0; padding-left: 16px; margin: 20px 0; color: #64748b; font-style: italic; }
             </style>
         </head>
-        <body>$bodyContent</body>
+        <body>$bodyContent
+        <script>
+            document.addEventListener('click', function(e) {
+                if (e.target && e.target.tagName === 'IMG') {
+                    try { Android.onImageClick(e.target.src); } catch(err) {}
+                }
+            });
+        </script>
+        </body>
         </html>
     """.trimIndent()
 
@@ -479,8 +496,15 @@ fun ArticleContentWeb(article: Article, fontSize: Int, onOpenLink: (String, Stri
                         return true
                     }
                 }
+                // Even though we set bgColor in HTML, keep transparent here to avoid initial white flash
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
                 settings.javaScriptEnabled = true
+                addJavascriptInterface(object {
+                    @android.webkit.JavascriptInterface
+                    fun onImageClick(url: String) {
+                        post { onImageClick?.invoke(url) }
+                    }
+                }, "Android")
             }
         },
         update = { it.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null) },

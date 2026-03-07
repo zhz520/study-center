@@ -34,11 +34,12 @@ fun QuestionScreen(
     subjectId: Int,
     subjectName: String,
     isFavorites: Boolean = false,
+    isMistakes: Boolean = false,
     onBack: () -> Unit,
     viewModel: QuestionViewModel = viewModel()
 ) {
-    LaunchedEffect(subjectId, isFavorites) {
-        viewModel.loadQuestions(subjectId, isFavorites)
+    LaunchedEffect(subjectId, isFavorites, isMistakes) {
+        viewModel.loadQuestions(subjectId, isFavorites, isMistakes)
     }
 
     val uiState by viewModel.uiState.collectAsState()
@@ -56,6 +57,7 @@ fun QuestionScreen(
     
     var showAnswerSheet by remember { mutableStateOf(false) }
     var showResetConfirmDialog by remember { mutableStateOf(false) }
+    var viewerImageUrl by remember { mutableStateOf<String?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
 
     BackHandler {
@@ -161,7 +163,7 @@ fun QuestionScreen(
     ) { paddingValues ->
         if (currentQuestion == null) {
             Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                if (uiState.questions.isEmpty()) {
+                if (uiState.isInitialLoading) {
                     cn.zhzgo.study.ui.components.SkeletonList(count = 3)
                 } else {
                     Text("暂无题目", color = Color.Gray)
@@ -206,7 +208,7 @@ fun QuestionScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Question Content
-                QuestionContent(question = currentQuestion)
+                QuestionContent(question = currentQuestion, onImageClick = { viewerImageUrl = it })
 
                 // Options based on type (Parsed fast on background thread in viewmodel)
                 val options = uiState.parsedOptionsMap[currentQuestion.id] ?: emptyMap()
@@ -255,29 +257,45 @@ fun QuestionScreen(
 
                 // Analysis Section
                 if (isSubmitted) {
-                    Spacer(modifier = Modifier.height(32.dp))
-                    
-                    // AI Tutor Button
-                    if (uiState.aiExplanation == null) {
-                         Button(
-                             onClick = { viewModel.requestAiExplanation(currentQuestion) },
-                             modifier = Modifier.fillMaxWidth().height(50.dp),
-                             colors = ButtonDefaults.buttonColors(
-                                 containerColor = MaterialTheme.colorScheme.surface,
-                                 contentColor = MaterialTheme.colorScheme.onSurface
-                             ),
-                             border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface),
-                             shape = RoundedCornerShape(8.dp),
-                             enabled = !uiState.isLoadingAi
-                         ) {
-                             if (uiState.isLoadingAi) {
-                                 CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.onSurface)
-                                 Spacer(modifier = Modifier.width(8.dp))
-                                 Text("AI 分析中...", fontSize = 14.sp)
-                             } else {
-                                 Text("✨ AI 讲解", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                             }
-                         }
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Action buttons row: AI Explain + Retry (mistakes mode)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // AI Tutor Button
+                        Button(
+                            onClick = { viewModel.requestAiExplanation(currentQuestion) },
+                            modifier = Modifier.weight(1f).height(50.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface),
+                            shape = RoundedCornerShape(8.dp),
+                            enabled = !uiState.isLoadingAi && uiState.aiExplanation == null
+                        ) {
+                            if (uiState.isLoadingAi) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.onSurface)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("AI 分析中...", fontSize = 14.sp)
+                            } else {
+                                Text("✨ AI 讲解", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        // Retry Button (Only in Mistakes Mode)
+                        if (uiState.isMistakesMode) {
+                            OutlinedButton(
+                                onClick = { viewModel.retryQuestion(currentQuestion.id) },
+                                modifier = Modifier.weight(1f).height(50.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF10B981))
+                            ) {
+                                Text("🔄 重新挑战", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
+                            }
+                        }
                     }
 
                     // Standard Analysis
@@ -291,7 +309,7 @@ fun QuestionScreen(
                         ) {
                              Text("解析", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                              Spacer(modifier = Modifier.height(8.dp))
-                             MarkdownText(text = currentQuestion.analysis)
+                             RenderText(text = currentQuestion.analysis)
                         }
                     }
                     
@@ -306,7 +324,7 @@ fun QuestionScreen(
                         ) {
                              Text("✨ AI 深度解析", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                              Spacer(modifier = Modifier.height(12.dp))
-                             MarkdownText(text = uiState.aiExplanation!!)
+                             RenderText(text = uiState.aiExplanation!!)
                              
                              if (uiState.aiRemaining != null) {
                                  Spacer(modifier = Modifier.height(16.dp))
@@ -372,6 +390,13 @@ fun QuestionScreen(
                     }
                 },
                 containerColor = MaterialTheme.colorScheme.surface
+            )
+        }
+
+        if (viewerImageUrl != null) {
+            ImageViewerDialog(
+                imageUrl = viewerImageUrl!!,
+                onDismiss = { viewerImageUrl = null }
             )
         }
     }

@@ -26,7 +26,9 @@ data class QuestionUiState(
     val favoriteQuestionIds: Set<Int> = emptySet(),
     val isLoadingMore: Boolean = false,
     val isLastPage: Boolean = false,
-    val parsedOptionsMap: Map<Int, Map<String, String>> = emptyMap()
+    val parsedOptionsMap: Map<Int, Map<String, String>> = emptyMap(),
+    val isInitialLoading: Boolean = true,
+    val isMistakesMode: Boolean = false
 )
 
 class QuestionViewModel(application: Application) : AndroidViewModel(application) {
@@ -42,6 +44,7 @@ class QuestionViewModel(application: Application) : AndroidViewModel(application
     private var currentPage = 1
     private var currentSubjectId = 0
     private var isFavoritesMode = false
+    private var isMistakesMode = false
 
     private suspend fun parseOptionsAsync(options: Any?): Map<String, String> = withContext(Dispatchers.Default) {
         if (options == null) return@withContext emptyMap()
@@ -53,11 +56,12 @@ class QuestionViewModel(application: Application) : AndroidViewModel(application
                 val map = mutableMapOf<String, String>()
                 options.forEachIndexed { index, item ->
                     if (item is Map<*, *>) {
-                        val content = item["content"]?.toString() ?: item["text"]?.toString() ?: item.toString()
+                        val content = item["content"]?.toString() ?: item["text"]?.toString() ?: ""
                         val label = item["label"]?.toString() ?: (Char('A'.code + index)).toString()
-                        map[label] = content
+                        if (content.isNotBlank()) map[label] = content
                     } else {
-                        map[(Char('A'.code + index)).toString()] = item.toString()
+                        val str = item.toString()
+                        if (str.isNotBlank()) map[(Char('A'.code + index)).toString()] = str
                     }
                 }
                 map
@@ -71,9 +75,9 @@ class QuestionViewModel(application: Application) : AndroidViewModel(application
                         val list: List<Map<String, Any>> = Gson().fromJson(options, listObjType)
                         val map = mutableMapOf<String, String>()
                         list.forEachIndexed { index, item ->
-                            val content = item["content"]?.toString() ?: item["text"]?.toString() ?: item.toString()
+                            val content = item["content"]?.toString() ?: item["text"]?.toString() ?: ""
                             val label = item["label"]?.toString() ?: (Char('A'.code + index)).toString()
-                            map[label] = content
+                            if (content.isNotBlank()) map[label] = content
                         }
                         map
                     } catch (e2: Exception) {
@@ -108,12 +112,12 @@ class QuestionViewModel(application: Application) : AndroidViewModel(application
         map
     }
 
-    fun loadQuestions(subjectId: Int, isFavorites: Boolean = false) {
+    fun loadQuestions(subjectId: Int, isFavorites: Boolean = false, isMistakes: Boolean = false) {
         currentSubjectId = subjectId
         isFavoritesMode = isFavorites
+        isMistakesMode = isMistakes
         currentPage = 1
-        
-        _uiState.update { it.copy(isLoadingMore = false, isLastPage = false, currentIndex = 0, questions = emptyList()) }
+        _uiState.update { it.copy(isLoadingMore = false, isLastPage = false, currentIndex = 0, questions = emptyList(), isInitialLoading = true, isMistakesMode = isMistakes) }
         
         viewModelScope.launch {
             try {
@@ -121,29 +125,39 @@ class QuestionViewModel(application: Application) : AndroidViewModel(application
                     try {
                         if (isFavoritesMode) apiService.getFavoritePracticeQuestions()
                         else apiService.getQuestions(subjectId, null, 1, PAGE_SIZE) 
-                    } catch (e: Exception) { emptyList() }
+                    } catch (e: Exception) { emptyList<Question>() }
                 }
                 val progressDeferred = async { 
-                    try { apiService.getProgress() } catch(e: Exception) { emptyList() }
+                    try { apiService.getProgress() } catch(e: Exception) { emptyList<cn.zhzgo.study.data.ProgressResponse>() }
                 }
                 
-                val result = questionsDeferred.await()
+                val originalResult = questionsDeferred.await()
                 val progressList = progressDeferred.await()
+                
+                val result = if (isMistakesMode) {
+                    val mistakeIds = progressList.filter { (it.subject_id == subjectId || it.subject_id == -1 /* global mistakes? */) && it.is_correct == 0 }.map { it.question_id }.toSet()
+                    originalResult.filter { it.id in mistakeIds }
+                } else {
+                    originalResult
+                }
+                
                 val parsedMap = buildParsedOptionsMap(result)
                 
                 val userAnsMap = mutableMapOf<Int, Any>()
                 val subSet = mutableSetOf<Int>()
                 
-                progressList.forEach { p ->
-                    val matchCriteria = if (isFavoritesMode) true else p.subject_id == subjectId
-                    if (matchCriteria) {
-                        val q = result.find { it.id == p.question_id }
-                        if (q != null) {
-                            subSet.add(p.question_id)
-                            if (q.type == "multiple") {
-                                userAnsMap[p.question_id] = p.answer.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-                            } else {
-                                userAnsMap[p.question_id] = p.answer
+                if (!isMistakesMode) {
+                    progressList.forEach { p ->
+                        val matchCriteria = if (isFavoritesMode) true else p.subject_id == subjectId
+                        if (matchCriteria) {
+                            val q = result.find { it.id == p.question_id }
+                            if (q != null) {
+                                subSet.add(p.question_id)
+                                if (q.type == "multiple") {
+                                    userAnsMap[p.question_id] = p.answer.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+                                } else {
+                                    userAnsMap[p.question_id] = p.answer
+                                }
                             }
                         }
                     }
@@ -164,13 +178,14 @@ class QuestionViewModel(application: Application) : AndroidViewModel(application
                         currentIndex = lastUnansweredIndex,
                         userAnswers = userAnsMap,
                         submittedQuestions = subSet,
-                        parsedOptionsMap = parsedMap
+                        parsedOptionsMap = parsedMap,
+                        isInitialLoading = false
                     )
                 }
                 
                 if (_uiState.value.favoriteQuestionIds.isEmpty()) loadFavorites()
             } catch (e: Exception) {
-                _uiState.update { it.copy(questions = emptyList()) }
+                _uiState.update { it.copy(questions = emptyList(), isInitialLoading = false) }
             }
         }
     }
@@ -273,12 +288,16 @@ class QuestionViewModel(application: Application) : AndroidViewModel(application
         val normalizedCorrect = normalizeAnswer(question.type, question.answer)
         val isCorrect = normalizedUser.equals(normalizedCorrect, ignoreCase = true)
         
-        viewModelScope.launch {
-            try {
-                val request = cn.zhzgo.study.data.ProgressRequest(question.id, isCorrect, userAnswerStr)
-                apiService.syncProgress(request) 
-            } catch (e: Exception) {
-                e.printStackTrace()
+        // In mistakes mode, don't sync to server - keep original first-attempt record intact
+        // This preserves leaderboard integrity
+        if (!isMistakesMode) {
+            viewModelScope.launch {
+                try {
+                    val request = cn.zhzgo.study.data.ProgressRequest(question.id, isCorrect, userAnswerStr)
+                    apiService.syncProgress(request) 
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
         }
     }
@@ -296,16 +315,26 @@ class QuestionViewModel(application: Application) : AndroidViewModel(application
             try {
                 val nextPage = currentPage + 1
                 val result = apiService.getQuestions(currentSubjectId, null, nextPage, PAGE_SIZE)
-                if (result.isNotEmpty()) {
-                    val newParsedMap = buildParsedOptionsMap(result)
+                
+                val filteredResult = if (isMistakesMode) {
+                    val progressList = apiService.getProgress()
+                    val mistakeIds = progressList.filter { (it.subject_id == currentSubjectId || it.subject_id == -1) && it.is_correct == 0 }.map { it.question_id }.toSet()
+                    result.filter { it.id in mistakeIds }
+                } else {
+                    result
+                }
+
+                if (filteredResult.isNotEmpty()) {
+                    val newParsedMap = buildParsedOptionsMap(filteredResult)
                     _uiState.update { it.copy(
-                        questions = it.questions + result,
+                        questions = it.questions + filteredResult,
                         parsedOptionsMap = it.parsedOptionsMap + newParsedMap,
                         isLastPage = result.size < PAGE_SIZE
                     ) }
                     currentPage = nextPage
                 } else {
-                    _uiState.update { it.copy(isLastPage = true) }
+                    _uiState.update { it.copy(isLastPage = result.size < PAGE_SIZE) }
+                    if (result.isNotEmpty()) currentPage = nextPage
                 }
             } catch (e: Exception) {
             } finally {
@@ -384,13 +413,23 @@ class QuestionViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             try {
                 apiService.resetProgress(subjectId.toString())
-                _uiState.update { QuestionUiState() }
+                _uiState.update { currentState -> 
+                    QuestionUiState(isMistakesMode = currentState.isMistakesMode)
+                }
                 kotlinx.coroutines.delay(300)
-                loadQuestions(subjectId)
+                loadQuestions(subjectId, isMistakes = _uiState.value.isMistakesMode)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
+    }
+
+    fun retryQuestion(questionId: Int) {
+        _uiState.update { it.copy(
+            submittedQuestions = it.submittedQuestions - questionId,
+            userAnswers = it.userAnswers - questionId,
+            aiExplanation = null
+        ) }
     }
     
     private fun formatUserAnswer(answer: Any?): String {

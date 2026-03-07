@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.Person
@@ -51,6 +52,7 @@ fun HomeScreen(
     onNavigateToLogin: () -> Unit,
     onNavigateToData: () -> Unit,
     onNavigateToStats: () -> Unit,
+    onNavigateToLeaderboard: () -> Unit,
     onNavigateToAdmin: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToWebView: (String, String) -> Unit
@@ -66,14 +68,7 @@ fun HomeScreen(
     
     var showLogoutDialog by remember { mutableStateOf(false) }
 
-    val greeting = remember {
-        val hour = java.time.LocalTime.now().hour
-        when (hour) {
-            in 5..11 -> "上午好"
-            in 12..18 -> "下午好"
-            else -> "晚上好"
-        }
-    }
+    val greeting = remember { cn.zhzgo.study.utils.GreetingUtils.getGreeting() }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -95,7 +90,7 @@ fun HomeScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(top = 8.dp)) {
                         Text(
-                            text = "$greeting, $userName",
+                            text = "$greeting $userName",
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
@@ -270,8 +265,16 @@ fun HomeScreen(
                             onClick = onNavigateToData
                         )
                     }
-                    if (userRole == "admin" || userRole == "demo") {
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ToolCard(
+                            icon = Icons.Default.EmojiEvents,
+                            label = "排行榜",
+                            modifier = Modifier.weight(1f),
+                            iconColor = MaterialTheme.colorScheme.onSurface,
+                            iconBgColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
+                            onClick = onNavigateToLeaderboard
+                        )
+                        if (userRole == "admin" || userRole == "demo") {
                             ToolCard(
                                 icon = Icons.Default.AdminPanelSettings,
                                 label = "后台管理",
@@ -280,6 +283,8 @@ fun HomeScreen(
                                 iconBgColor = MaterialTheme.colorScheme.primary,
                                 onClick = onNavigateToAdmin
                             )
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }

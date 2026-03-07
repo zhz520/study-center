@@ -33,34 +33,77 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
     private val _isRegistered = MutableStateFlow(false)
     val isRegistered = _isRegistered.asStateFlow()
 
+    // Field-level validation hints
+    private val _usernameError = MutableStateFlow<String?>(null)
+    val usernameError = _usernameError.asStateFlow()
+
+    private val _passwordError = MutableStateFlow<String?>(null)
+    val passwordError = _passwordError.asStateFlow()
+
+    private val _confirmPasswordError = MutableStateFlow<String?>(null)
+    val confirmPasswordError = _confirmPasswordError.asStateFlow()
+
+    // Success message for Snackbar
+    private val _successMessage = MutableStateFlow<String?>(null)
+    val successMessage = _successMessage.asStateFlow()
+
+    fun clearSuccessMessage() {
+        _successMessage.value = null
+    }
+
     fun onUsernameChange(newUsername: String) {
         _username.value = newUsername
+        _usernameError.value = null
+        _error.value = null
     }
 
     fun onPasswordChange(newPassword: String) {
         _password.value = newPassword
+        _passwordError.value = null
+        _error.value = null
     }
     
     fun onConfirmPasswordChange(newPassword: String) {
         _confirmPassword.value = newPassword
+        _confirmPasswordError.value = null
+        _error.value = null
     }
 
     fun register() {
-        if (_username.value.isBlank() || _password.value.isBlank()) {
-            _error.value = "用户名和密码不能为空"
-            return
+        // Field-level validation
+        var valid = true
+        
+        if (_username.value.isBlank()) {
+            _usernameError.value = "请输入用户名"
+            valid = false
+        } else if (_username.value.length < 2) {
+            _usernameError.value = "用户名至少2个字符"
+            valid = false
+        } else if (_username.value.length > 20) {
+            _usernameError.value = "用户名不能超过20个字符"
+            valid = false
         }
         
-        if (_password.value != _confirmPassword.value) {
-            _error.value = "两次密码输入不一致"
-            return
+        if (_password.value.isBlank()) {
+            _passwordError.value = "请输入密码"
+            valid = false
+        } else {
+            val regex = "^(?=.*[a-zA-Z])(?=.*\\d).{8,}$".toRegex()
+            if (!regex.matches(_password.value)) {
+                _passwordError.value = "密码至少8位，需包含字母和数字"
+                valid = false
+            }
         }
         
-        val regex = "^(?=.*[a-zA-Z])(?=.*\\d).{8,}\$".toRegex()
-        if (!regex.matches(_password.value)) {
-            _error.value = "密码长度至少8位，且必须包含字母和数字"
-            return
+        if (_confirmPassword.value.isBlank()) {
+            _confirmPasswordError.value = "请再次输入密码"
+            valid = false
+        } else if (_password.value != _confirmPassword.value) {
+            _confirmPasswordError.value = "两次密码输入不一致"
+            valid = false
         }
+        
+        if (!valid) return
 
         viewModelScope.launch {
             _isLoading.value = true
@@ -68,14 +111,26 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
             try {
                 val response = apiService.register(LoginRequest(_username.value, _password.value))
                 if (response != null && response.message != null && response.message.isNotEmpty()) {
-                    // Registration successful, the backend does not return a token.
-                    // Guide the user to Login manually.
+                    _successMessage.value = "注册成功！请使用新账号登录"
                     _isRegistered.value = true
                 } else {
                     _error.value = "注册失败，请稍后重试"
                 }
+            } catch (e: retrofit2.HttpException) {
+                val code = e.code()
+                _error.value = when (code) {
+                    409 -> "该用户名已被注册，请换一个"
+                    400 -> "注册信息格式不正确"
+                    429 -> "操作过于频繁，请稍后再试"
+                    500 -> "服务器异常，请稍后重试"
+                    else -> "注册失败 ($code)"
+                }
+            } catch (e: java.net.UnknownHostException) {
+                _error.value = "无法连接到服务器，请检查网络"
+            } catch (e: java.net.SocketTimeoutException) {
+                _error.value = "连接超时，请检查网络后重试"
             } catch (e: Exception) {
-                _error.value = "注册失败: ${e.message}"
+                _error.value = "注册失败：${e.localizedMessage ?: "未知错误"}"
             } finally {
                 _isLoading.value = false
             }

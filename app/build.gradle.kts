@@ -9,12 +9,13 @@ android {
     namespace = "cn.zhzgo.study"
     compileSdk = 36
 
+
     defaultConfig {
         applicationId = "cn.zhzgo.study"
         minSdk = 24
         targetSdk = 36
-        versionCode = 105
-        versionName = "1.0.5"
+        versionCode = 108
+        versionName = "1.0.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
@@ -80,6 +81,9 @@ dependencies {
     implementation(libs.squareup.okhttp.logging)
     implementation(libs.androidx.datastore.preferences)
     implementation("androidx.compose.material:material-icons-extended:1.6.3")
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.ui)
+
     implementation("androidx.browser:browser:1.8.0")
     implementation(libs.coil.compose)
     implementation("io.noties.markwon:core:4.6.2")
@@ -87,6 +91,9 @@ dependencies {
     implementation("io.noties.markwon:image:4.6.2")
     implementation("io.noties.markwon:inline-parser:4.6.2")
     implementation("io.noties.markwon:ext-latex:4.6.2")
+    implementation("io.noties.markwon:ext-tables:4.6.2")
+    implementation("io.noties.markwon:ext-strikethrough:4.6.2")
+    implementation("io.noties.markwon:linkify:4.6.2")
     
     // QQ Open SDK
     implementation("com.tencent.tauth:qqopensdk:3.52.0")

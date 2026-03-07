@@ -343,6 +343,7 @@ fun getIconForTool(iconName: String): ImageVector {
         "icon_key" -> Icons.Filled.Key
         "icon_code" -> Icons.Filled.Code
         "icon_http" -> Icons.Filled.Http
+        "icon_video_parser" -> Icons.Filled.VideoFile
         else -> Icons.Filled.Build
     }
 }
@@ -360,7 +361,7 @@ fun getCategoryName(category: String): String {
         "text" -> "文本工具"
         "image" -> "图像工具"
         "document" -> "文档处理"
-        "media" -> "影音工具"
+        "media" -> "影音与解析"
         else -> "其他工具"
     }
 }

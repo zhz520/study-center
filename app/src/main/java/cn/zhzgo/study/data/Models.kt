@@ -82,7 +82,8 @@ data class Subject(
     val id: Int,
     val name: String,
     val major_id: Int,
-    val icon: String?
+    val icon: String?,
+    val question_count: Int? = null
 )
 
 @Immutable
@@ -143,6 +144,16 @@ data class UserStats(
     val active_days: Int,
     val total_questions: Int,
     val accuracy: Int
+)
+
+@Immutable
+data class LeaderboardUser(
+    val rank: Int,
+    val user_id: Int,
+    val username: String,
+    val nickname: String?,
+    val avatar_icon: String?,
+    val score: Int
 )
 
 @Immutable
@@ -285,4 +296,28 @@ data class UserProfileResponse(
 @Immutable
 data class CommentRequest(
     val content: String
+)
+
+// Video Parser
+@Immutable
+data class VideoParseRequest(
+    val url: String
+)
+
+@Immutable
+data class VideoParseResult(
+    val platform: String? = null,
+    val type: String? = null,
+    val title: String? = null,
+    val videoUrl: String? = null,
+    val coverUrl: String? = null,
+    val images: List<String>? = null,
+    val author: String? = null
+)
+
+@Immutable
+data class VideoParseResponse(
+    val success: Boolean,
+    val data: VideoParseResult? = null,
+    val error: String? = null
 )

@@ -80,7 +80,8 @@ abstract class AppDatabase : RoomDatabase() {
                 ToolEntity("security_crypto", "加解密", "icon_security", "tools/security_crypto", category = "security"),
                 ToolEntity("security_jwt", "JWT 解析", "icon_key", "tools/security_jwt", category = "security"),
                 ToolEntity("dev_json_regex", "JSON/正则", "icon_code", "tools/dev_json_regex", category = "dev"),
-                ToolEntity("dev_http_test", "网络测试", "icon_http", "tools/dev_http_test", category = "dev")
+                ToolEntity("dev_http_test", "网络测试", "icon_http", "tools/dev_http_test", category = "dev"),
+                ToolEntity("video_parser", "视频解析", "icon_video_parser", "tools/video_parser", category = "media")
             )
             toolDao.insertAll(initialTools)
             // Cleanup legacy tools

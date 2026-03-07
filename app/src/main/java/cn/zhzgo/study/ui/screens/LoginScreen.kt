@@ -19,6 +19,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import cn.zhzgo.study.ui.components.AppTextField
 import cn.zhzgo.study.ui.components.PrimaryButton
 import cn.zhzgo.study.ui.components.LoadingOverlay
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -35,6 +36,8 @@ fun LoginScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.loginError.collectAsState()
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
+    val usernameError by viewModel.usernameError.collectAsState()
+    val passwordError by viewModel.passwordError.collectAsState()
 
     val needBindQQ by viewModel.needBindQQ.collectAsState()
 
@@ -51,8 +54,12 @@ fun LoginScreen(
         }
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -90,6 +97,14 @@ fun LoginScreen(
                     label = "用户名",
                     leadingIcon = Icons.Default.Person
                 )
+                if (usernameError != null) {
+                    Text(
+                        text = usernameError!!,
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp,
+                        modifier = Modifier.fillMaxWidth().padding(start = 8.dp, top = 4.dp)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -100,14 +115,29 @@ fun LoginScreen(
                     visualTransformation = PasswordVisualTransformation(),
                     leadingIcon = Icons.Default.Lock
                 )
+                if (passwordError != null) {
+                    Text(
+                        text = passwordError!!,
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp,
+                        modifier = Modifier.fillMaxWidth().padding(start = 8.dp, top = 4.dp)
+                    )
+                }
 
                 if (error != null) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = error!!, 
-                        color = MaterialTheme.colorScheme.error,
-                        fontSize = 14.sp
-                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = error!!,
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -115,7 +145,7 @@ fun LoginScreen(
                 PrimaryButton(
                     text = if (isLoading) "登录中..." else "登录",
                     onClick = viewModel::login,
-                    enabled = !isLoading
+                    enabled = !isLoading && username.isNotBlank() && password.isNotBlank()
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -154,10 +184,16 @@ fun LoginScreen(
                                 }
 
                                 override fun onError(code: Int, message: String, detail: String?) {
-                                    // Handle UI error display if necessary via ViewModel
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("QQ 登录失败：$message")
+                                    }
                                 }
 
-                                override fun onCancel() {}
+                                override fun onCancel() {
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("已取消 QQ 登录")
+                                    }
+                                }
                             })
                         }
                     },
